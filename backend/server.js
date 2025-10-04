@@ -1,15 +1,19 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+
+// Import routes
 const authRoutes = require('./src/routes/auth.routes'); 
+const ticketRoutes = require('./src/routes/ticket.routes');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-// Add the auth routes to the server
+// Use routes
 app.use('/api/auth', authRoutes);
+app.use('/api/tickets', ticketRoutes);
 
 app.get('/', (req, res) => {
   res.send('HelpDesk Mini API is running...');
