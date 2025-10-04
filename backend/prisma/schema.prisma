@@ -1,0 +1,95 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  AGENT
+  ADMIN
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+}
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  name            String
+  passwordHash    String
+  role            Role     @default(USER)
+  createdAt       DateTime @default(now())
+  ticketsCreated  Ticket[] @relation("CreatedBy")
+  ticketsAssigned Ticket[] @relation("AssignedTo")
+  comments        Comment[]
+  logs            TimelineLog[]
+  idempotencyKeys IdempotencyKey[]
+}
+
+model Ticket {
+  id          String        @id @default(cuid())
+  title       String
+  description String
+  status      TicketStatus  @default(OPEN)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  dueAt       DateTime // SLA Deadline
+
+  createdBy   User     @relation("CreatedBy", fields: [createdById], references: [id])
+  createdById String
+  assignedTo  User?    @relation("AssignedTo", fields: [assignedToId], references: [id])
+  assignedToId String?
+
+  comments    Comment[]
+  timeline    TimelineLog[]
+
+  // For Optimistic Locking
+  version     Int      @default(1)
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+
+  ticket    Ticket @relation(fields: [ticketId], references: [id])
+  ticketId  String
+  author    User   @relation(fields: [authorId], references: [id])
+  authorId  String
+}
+
+model TimelineLog {
+  id        String   @id @default(cuid())
+  action    String // e.g., "CREATED", "STATUS_CHANGED", "ASSIGNED", "COMMENT_ADDED"
+  details   Json?    // Optional: { from: "OPEN", to: "IN_PROGRESS" }
+  createdAt DateTime @default(now())
+
+  ticket    Ticket @relation(fields: [ticketId], references: [id])
+  ticketId  String
+  actor     User   @relation(fields: [actorId], references: [id])
+  actorId   String
+}
+
+model IdempotencyKey {
+  id             String   @id @default(cuid())
+  key            String
+  requestPath    String
+  responseBody   Json
+  responseStatus Int
+  createdAt      DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  @@unique([key, userId])
+}
