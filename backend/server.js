@@ -5,11 +5,13 @@ const cors = require('cors');
 // Import routes
 const authRoutes = require('./src/routes/auth.routes'); 
 const ticketRoutes = require('./src/routes/ticket.routes');
+const rateLimitMiddleware = require('./src/middlewares/rate.limiter');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(rateLimitMiddleware);
 
 // Use routes
 app.use('/api/auth', authRoutes);

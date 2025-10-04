@@ -50,17 +50,29 @@ exports.getAllTickets = async (req, res, next) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
     const offset = parseInt(req.query.offset) || 0;
+    const { status, search } = req.query;
     
-    // Optional filter by status
-    const where = req.query.status ? { status: req.query.status.toUpperCase() } : {};
+    // Build the filter object
+    const where = {};
+
+    if (status) {
+      where.status = status.toUpperCase();
+    }
+
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+        // This checks if 'some' of the related comments match the search term
+        { comments: { some: { content: { contains: search, mode: 'insensitive' } } } },
+      ];
+    }
 
     const tickets = await prisma.ticket.findMany({
       where,
       take: limit,
       skip: offset,
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy: { createdAt: 'desc' },
     });
 
     const totalTickets = await prisma.ticket.count({ where });
